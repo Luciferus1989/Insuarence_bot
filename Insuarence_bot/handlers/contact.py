@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from DB_base.db import get_db, User
 
-def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Обрабатывает контактные данные (номер телефона).
     """
@@ -10,25 +10,30 @@ def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
 
     if contact:
-        for db in get_db():
+        async for db in get_db():
             try:
-                # Обновляем номер телефона пользователя
-                user = db.query(User).filter(User.telegram_id == contact.user_id).first()
+                result = await db.execute(
+                    User.__table__.select().where(User.telegram_id == contact.user_id)
+                )
+                user = result.scalar_one_or_none()
                 if user:
-                    user.phone_number = contact.phone_number
-                    db.commit()
-
-                    context.bot.send_message(
+                    await db.execute(
+                        User.__table__.update()
+                        .where(User.telegram_id == contact.user_id)
+                        .values(phone_number=contact.phone_number)
+                    )
+                    await db.commit()
+                    await context.bot.send_message(
                         chat_id=chat_id,
                         text="Спасибо! Ваш номер телефона успешно сохранён. 📞"
                     )
                 else:
-                    context.bot.send_message(
+                    await context.bot.send_message(
                         chat_id=chat_id,
                         text="Произошла ошибка: пользователь не найден."
                     )
             except Exception as e:
-                context.bot.send_message(
+                await context.bot.send_message(
                     chat_id=chat_id,
                     text="Произошла ошибка при сохранении номера телефона."
                 )

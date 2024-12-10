@@ -4,7 +4,7 @@ from telegram.ext import CallbackContext
 from DB_base.db import get_db, User
 
 
-def collect_user_data(update: Update, context: CallbackContext):
+async def collect_user_data(update: Update, context: CallbackContext):
     """
     Собирает данные о пользователе и сохраняет их в базу данных.
     """
@@ -28,19 +28,19 @@ def collect_user_data(update: Update, context: CallbackContext):
                 db.add(new_user)
                 db.commit()
 
-                context.bot.send_message(
+                await context.bot.send_message(
                     chat_id=chat_id,
                     text="Ваши данные успешно сохранены! 🚗",
                     reply_markup=ReplyKeyboardRemove(),
                 )
-                context.bot.send_message(
+                await context.bot.send_message(
                     chat_id=chat_id,
                     text="Нам может потребоваться ваш номер телефона!\n"
                          "(Мы не будем спамить на него, честно-честно!)",
                 )
                 keyboard = [[KeyboardButton("Отправить номер телефона", request_contact=True)]]
                 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
-                context.bot.send_message(
+                await context.bot.send_message(
                     chat_id=chat_id,
                     text="Телефон:",
                     reply_markup=reply_markup,
@@ -50,13 +50,13 @@ def collect_user_data(update: Update, context: CallbackContext):
                     ["Check profile"],
                 ]
                 reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-                context.bot.send_message(
+                await context.bot.send_message(
                     chat_id=chat_id,
                     text="Вы уже зарегистрированы! 🚗",
                     reply_markup=reply_markup,
                 )
         except Exception as e:
-            context.bot.send_message(
+            await context.bot.send_message(
                 chat_id=chat_id,
                 text="Произошла ошибка при сохранении данных. Попробуйте позже.",
             )

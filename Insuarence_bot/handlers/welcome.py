@@ -1,7 +1,7 @@
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import CallbackContext
 
-def welcome(update: Update, context: CallbackContext) -> None:
+async def welcome(update: Update, context: CallbackContext) -> None:
     """"
     Отправляет приветственное сообщение новому пользователю.
     """
@@ -17,7 +17,7 @@ def welcome(update: Update, context: CallbackContext) -> None:
     ]
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-    context.bot.send_message(
+    await context.bot.send_message(
         chat_id=chat_id,
         text=message,
         reply_markup=reply_markup,
