@@ -16,7 +16,8 @@ async def welcome(message: types.Message):
         keyboard=[
             [KeyboardButton(text="Начать")]  # Одна кнопка в строке
         ],
-        resize_keyboard=True  # Уменьшить клавиатуру под размер кнопок
-    )
+        resize_keyboard=True,  # Уменьшить клавиатуру под размер кнопок
+        input_field_placeholder="Push",
+        )
 
     await message.answer(text, reply_markup=keyboard)

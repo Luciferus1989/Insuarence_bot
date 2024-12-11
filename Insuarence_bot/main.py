@@ -1,7 +1,7 @@
 from aiogram import Bot, Dispatcher, Router
-from aiogram.types import BotCommand, Message
+from aiogram.types import BotCommand, Message, ContentType
 from dotenv import load_dotenv
-
+from aiogram.filters import Command
 from DB_base.db import init_db
 from handlers.welcome import welcome
 from handlers.start import collect_user_data
@@ -21,7 +21,7 @@ dp = Dispatcher()
 router = Router()
 
 # Регистрируем обработчики через Router
-@router.message(commands=["start"])
+@router.message(Command(commands=["start"]))
 async def start_handler(message: Message):
     await welcome(message)
 
@@ -29,7 +29,7 @@ async def start_handler(message: Message):
 async def collect_data_handler(message: Message):
     await collect_user_data(message)
 
-@router.message(content_types=["contact"])
+@router.message(lambda message: message.content_type == ContentType.CONTACT)
 async def contact_handler(message: Message):
     await handle_contact(message)
 
@@ -50,7 +50,6 @@ async def on_startup():
     """
     print("Инициализация базы данных...")
     await set_bot_commands()
-    print("Бот запущен. Ожидание сообщений...")
 
 
 async def main():
@@ -59,16 +58,10 @@ async def main():
     """
     # Инициализация базы данных
     await init_db()
-
-    # Установка команд бота
     await set_bot_commands()
-
-    # Подключаем маршруты
     dp.include_router(router)
-
     print("Бот успешно запущен. Ожидание сообщений...")
 
-    # Запускаем бота
     await dp.start_polling(bot)
 
 

@@ -61,4 +61,6 @@ async def collect_user_data(message: types.Message):
             await message.answer(
                 "Произошла ошибка при сохранении данных. Попробуйте позже."
             )
+
+
             print(f"Ошибка сохранения в базу: {e}")
