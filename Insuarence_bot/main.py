@@ -1,11 +1,13 @@
 from aiogram import Bot, Dispatcher, Router
 from aiogram.types import BotCommand, Message
-from aiogram.utils import executor
 from dotenv import load_dotenv
+
+from DB_base.db import init_db
 from handlers.welcome import welcome
 from handlers.start import collect_user_data
 from handlers.contact import handle_contact
 import os
+import asyncio
 
 load_dotenv()
 
@@ -51,13 +53,27 @@ async def on_startup():
     print("Бот запущен. Ожидание сообщений...")
 
 
-def main():
+async def main():
     """
-    Основная функция для запуска бота.
+    Основная функция запуска бота.
     """
+    # Инициализация базы данных
+    await init_db()
+
+    # Установка команд бота
+    await set_bot_commands()
+
+    # Подключаем маршруты
     dp.include_router(router)
-    executor.run(dp, bot=bot, on_startup=on_startup)
+
+    print("Бот успешно запущен. Ожидание сообщений...")
+
+    # Запускаем бота
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Бот остановлен.")
