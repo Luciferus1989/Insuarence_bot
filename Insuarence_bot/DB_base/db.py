@@ -1,13 +1,14 @@
 from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = "sqlite:///./users.db"
-engine = create_engine(DATABASE_URL, echo=False)
-SessionLocal = sessionmaker(bind=engine)
+DATABASE_URL = "sqlite+aiosqlite:///./users.db"
 
+engine = create_async_engine(DATABASE_URL, echo=True)
+SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 Base = declarative_base()
+
 
 class User(Base):
     __tablename__ = "users"
@@ -21,15 +22,15 @@ class User(Base):
     telephone = Column(String,nullable=True)
 
 
-def init_db():
-    Base.metadata.create_all(bind=engine)
+async def init_db():
+    """Создаёт таблицы."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-def get_db():
-    db: Session = SessionLocal()
-    try:
+
+async def get_db():
+    async with SessionLocal() as db:
         yield db
-    finally:
-        db.close()
 
 
 
