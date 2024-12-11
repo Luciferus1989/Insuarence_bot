@@ -1,53 +1,63 @@
-import os
-import asyncio
-from telegram.ext import Application, MessageHandler, filters, CommandHandler
+from aiogram import Bot, Dispatcher, Router
+from aiogram.types import BotCommand, Message
+from aiogram.utils import executor
 from dotenv import load_dotenv
-from telegram import Update
-from DB_base.db import init_db
-from handlers import welcome, start, contact
+from handlers.welcome import welcome
+from handlers.start import collect_user_data
+from handlers.contact import handle_contact
+import os
 
 load_dotenv()
 
-async def echo(update: Update, context):
-    """Обработчик для эхо-ответа."""
-    await update.message.reply_text(update.message.text)
+# Инициализация бота и диспетчера
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
+
+router = Router()
+
+# Регистрируем обработчики через Router
+@router.message(commands=["start"])
+async def start_handler(message: Message):
+    await welcome(message)
+
+@router.message(lambda message: message.text == "Начать")
+async def collect_data_handler(message: Message):
+    await collect_user_data(message)
+
+@router.message(content_types=["contact"])
+async def contact_handler(message: Message):
+    await handle_contact(message)
+
+
+async def set_bot_commands():
+    """
+    Устанавливаем команды, которые будут доступны в меню Telegram.
+    """
+    commands = [
+        BotCommand(command="/start", description="Запустить бота"),
+    ]
+    await bot.set_my_commands(commands)
+
+
+async def on_startup():
+    """
+    Действия при запуске бота.
+    """
+    print("Инициализация базы данных...")
+    await set_bot_commands()
+    print("Бот запущен. Ожидание сообщений...")
+
 
 def main():
-    """Запуск бота."""
-    application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+    """
+    Основная функция для запуска бота.
+    """
+    dp.include_router(router)
+    executor.run(dp, bot=bot, on_startup=on_startup)
 
-    # Добавляем обработчик сообщений
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
-
-    print("Бот запущен. Ожидание сообщений...")
-    application.run_polling()
 
 if __name__ == "__main__":
     main()
-
-# async def run_bot():
-#     """Асинхронная точка входа для бота."""
-#     # Инициализируем базу данных
-#     await init_db()
-#
-#     # Создаём объект приложения Telegram Bot API
-#     application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
-#
-#     # Добавляем хендлеры
-#     application.add_handler(CommandHandler("start", welcome.welcome))
-#     application.add_handler(MessageHandler(filters.TEXT & filters.Regex("^Начать$"), start.collect_user_data))
-#     application.add_handler(MessageHandler(filters.CONTACT, contact.handle_contact))
-#
-#     # Запуск бота
-#     print("Бот запущен. Ожидание сообщений...")
-#     await application.run_polling()
-#
-# if __name__ == "__main__":
-#     try:
-#         # Проверяем, есть ли активный цикл событий
-#         loop = asyncio.get_event_loop()
-#     except RuntimeError:  # Если цикла нет, создаём новый
-#         loop = asyncio.new_event_loop()
-#         asyncio.set_event_loop(loop)
-#
-#     loop.run_until_complete(run_bot())
