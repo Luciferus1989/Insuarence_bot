@@ -1,33 +1,79 @@
-import os
-from telegram.ext import Application, MessageHandler, filters, CommandHandler
+from aiogram import Bot, Dispatcher, Router
+from aiogram.types import BotCommand, Message
 from dotenv import load_dotenv
+
 from DB_base.db import init_db
-from handlers import welcome, start, contact
+from handlers.welcome import welcome
+from handlers.start import collect_user_data
+from handlers.contact import handle_contact
+import os
+import asyncio
 
 load_dotenv()
 
+# Инициализация бота и диспетчера
+BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
-def run_bot():
-    """Точка входа для бота."""
 
-    # Инициализируем базу данных
-    init_db()
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
-    # Создаём объект приложения Telegram Bot API
-    application = Application.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+router = Router()
 
-    # Добавляем хендлеры
-    application.add_handler(CommandHandler("start", welcome.welcome))
-    application.add_handler(MessageHandler(filters.TEXT & filters.Regex("^Начать$"), start.collect_user_data))
-    application.add_handler(MessageHandler(filters.CONTACT, contact.handle_contact))
+# Регистрируем обработчики через Router
+@router.message(commands=["start"])
+async def start_handler(message: Message):
+    await welcome(message)
 
-    # Запуск бота
-    application.run_polling()
+@router.message(lambda message: message.text == "Начать")
+async def collect_data_handler(message: Message):
+    await collect_user_data(message)
+
+@router.message(content_types=["contact"])
+async def contact_handler(message: Message):
+    await handle_contact(message)
+
+
+async def set_bot_commands():
+    """
+    Устанавливаем команды, которые будут доступны в меню Telegram.
+    """
+    commands = [
+        BotCommand(command="/start", description="Запустить бота"),
+    ]
+    await bot.set_my_commands(commands)
+
+
+async def on_startup():
+    """
+    Действия при запуске бота.
+    """
+    print("Инициализация базы данных...")
+    await set_bot_commands()
+    print("Бот запущен. Ожидание сообщений...")
+
+
+async def main():
+    """
+    Основная функция запуска бота.
+    """
+    # Инициализация базы данных
+    await init_db()
+
+    # Установка команд бота
+    await set_bot_commands()
+
+    # Подключаем маршруты
+    dp.include_router(router)
+
+    print("Бот успешно запущен. Ожидание сообщений...")
+
+    # Запускаем бота
+    await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     try:
-        run_bot()
-    except Exception as e:
-        print(f"Произошла ошибка: {e}")
-    except KeyboardInterrupt:
-        print("Завершение работы бота.")
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Бот остановлен.")
